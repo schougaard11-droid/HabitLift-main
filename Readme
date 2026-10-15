@@ -1,0 +1,73 @@
+# HabitLift
+
+HabitLift is a nutrition and habit-tracking app. It helps users look up foods, review nutrition per 100 grams, and estimate the nutrition in a portion before adding it to a meal. The food catalogue comes from Supabase, so searches use the project's real food data rather than a bundled sample list.
+
+## How It Works
+
+- `frontend/` is the Angular application. Its pages cover today's meal summary, food search, portion entry, and profile details.
+- `HabitLift_App/HabitLift.Api/` is the ASP.NET Core API. It uses Entity Framework Core and Npgsql to read PostgreSQL data from Supabase.
+- The Angular dev-server proxy forwards `/api` requests to the API at `http://localhost:5147`.
+
+Food search is available at `/food`. Enter a name to search `public.food`; the API returns up to 20 matches. Selecting a result opens `/food/portion`, where the portion preview scales its calories, protein, and carbohydrates by the entered grams.
+
+The Today page, profile values, calorie totals, and saving a portion are currently sample or unfinished flows. Food search is connected to Supabase, but adding a portion does not yet persist it to a meal.
+
+## Requirements
+
+- .NET 10 SDK
+- Node.js and npm compatible with the Angular project
+- A Supabase project with its PostgreSQL database connection details
+
+## Configure Supabase
+
+From the repository root, store the PostgreSQL connection string with .NET User Secrets:
+
+```sh
+dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Host=YOUR_HOST;Port=5432;Database=postgres;Username=YOUR_USERNAME;Password=YOUR_DATABASE_PASSWORD;SSL Mode=Require;Trust Server Certificate=true" --project HabitLift_App/HabitLift.Api/HabitLift.Api.csproj
+```
+
+Replace the placeholders with the database connection details from Supabase. Use the database password, not an anon or service-role API key. User Secrets keeps this value out of the source files.
+
+The food search expects the `public.food` table with `food_id`, `food_name`, `calories_per_100g`, `protein_per_100g`, `carbs_per_100g`, and `fat_per_100g` columns. `fat_per_100g` may be null. The API also reads `public.user_profiles` at `/api/users`.
+
+## Run Locally
+
+Start the API from the repository root:
+
+```sh
+dotnet run --project HabitLift_App/HabitLift.Api/HabitLift.Api.csproj --launch-profile http
+```
+
+In a second terminal, install the frontend dependencies and start Angular:
+
+```sh
+cd frontend
+npm ci
+npm start
+```
+
+Open `http://localhost:4200`. The API listens at `http://localhost:5147`; visit `/db-test` there to check the Supabase connection. The Angular `/api` proxy is configured in `frontend/proxy.conf.json`.
+
+**Path note:** Vite does not reliably serve module files when the repository path contains `#`. If `ng serve` shows module-loading errors, place or clone the repository under a path without `#` (for example, `~/Projects/HabitLift-main`) and run the commands again.
+
+## Useful Checks
+
+Build the backend from the repository root:
+
+```sh
+dotnet build Console1.slnx
+```
+
+Build or test the Angular app from `frontend/`:
+
+```sh
+npm run build
+npm test
+```
+
+## API Endpoints
+
+- `GET /api/health` reports whether the API is running.
+- `GET /db-test` checks the Supabase database connection.
+- `GET /api/users` returns profile rows from `public.user_profiles`.
+- `GET /api/foods?search=egg` searches food names in `public.food`.
